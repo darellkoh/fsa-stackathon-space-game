@@ -11,7 +11,7 @@
 <body>
     <script type="text/javascript">
     window.onload = function() {
-        var game = new Phaser.Game(950, 600, Phaser.AUTO, '', {
+        var game = new Phaser.Game(950, 625, Phaser.AUTO, '', {
             preload: preload,
             create: create,
             update: update
@@ -63,7 +63,7 @@
             bullets.setAll('checkWorldBounds', true);
 
             // create player
-            player = game.add.sprite(400, 500, 'player');
+            player = game.add.sprite(450, 525, 'player');
             player.anchor.setTo(0.5, 0.5);
             player.width = 70;
             player.height = 80;
@@ -95,7 +95,7 @@
             greenEnemies = game.add.group();
             greenEnemies.enableBody = true;
             greenEnemies.physicsBodyType = Phaser.Physics.ARCADE;
-            greenEnemies.createMultiple(5, 'enemy-green');
+            greenEnemies.createMultiple(20, 'enemy-green');
             greenEnemies.setAll('anchor.x', 0.5);
             greenEnemies.setAll('anchor.y', 0.5);
             greenEnemies.setAll('scale.x', 0.6);
@@ -174,7 +174,7 @@
 
             // check for collisions
             game.physics.arcade.overlap(player, greenEnemies, shipCollide, null, this);
-
+            game.physics.arcade.overlap(greenEnemies, bullets, hitEnemy, null, this);
         }
 
         // utility functions
@@ -252,6 +252,16 @@
             explosion.alpha = 0.7;
             explosion.play('explosion', 30, false, true);
             enemy.kill();
+        }
+
+        function hitEnemy(enemy, bullet){
+            var explosion = explosions.getFirstExists(false);
+            explosion.reset(bullet.body.x + bullet.body.halfWidth, bullet.body.y + bullet.body.halfHeight);
+            explosion.body.velocity.y = enemy.body.velocity.y;
+            explosion.alpha = 0.7;
+            explosion.play('explosion', 30, false, true);
+            enemy.kill();
+            bullet.kill();
         }
     };
     </script>
