@@ -31,9 +31,9 @@
 
 
         // constants
-        const ACCELERATION = 800
+        const ACCELERATION = 900
         DRAG = 400
-        MAXSPEED = 400
+        MAXSPEED = 500
 
         function preload() {
             game.load.image('starfield', 'space2.jpg');
@@ -44,7 +44,7 @@
             game.load.image('player', 'player.png');
             game.load.image('bullet', 'bullet.png');
             game.load.image('enemy-green', 'enemy-green.png');
-            game.load.spritesheet('explosion', 'explode.png');
+            game.load.spritesheet('explosion', 'explode.png', 128, 128);
         }
 
 
@@ -101,10 +101,9 @@
             greenEnemies.setAll('scale.x', 0.6);
             greenEnemies.setAll('scale.y', 0.6);
             greenEnemies.setAll('angle', 180);
-            // greenEnemies.setAll('outOfBoundsKill', true);
-            // greenEnemies.setAll('checkWorldBounds', true);
             greenEnemies.forEach(function(enemy) {
                 addEnemyEmitterTrail(enemy);
+                enemy.body.setSize(enemy.width * 3 / 4, enemy.height * 3 / 4);
                 enemy.events.onKilled.add(function() {
                     enemy.trail.kill();
                 });
@@ -173,13 +172,20 @@
 
             game.world.wrap(player, 64);
 
-            // check for collision
+            // check for collisions
             game.physics.arcade.overlap(player, greenEnemies, shipCollide, null, this);
-
 
         }
 
         // utility functions
+
+        // for debugging purposes
+        function render(){
+            for(var i = 0; i < greenEnemies.length; i++){
+                game.debug.body(greenEnemies.children[i]);
+            }
+            game.debug.body(player);
+        }
         function fireBullet() {
             var bullet_speed = 400;
             var bullet_time_spacing = 250;
@@ -209,6 +215,7 @@
 
                 enemy.trail.start(false, 800, 1);
 
+                // rotate enemy ship
                 enemy.update = function() {
                     enemy.angle = 180 - game.math.radToDeg(Math.atan2(enemy.body.velocity.x, enemy.body.velocity.y));
 
@@ -218,6 +225,7 @@
                     // kill enemies if they go offscreen
                     if (enemy.y > game.height + 200) {
                         enemy.kill();
+                        enemy.y = -20;
                     }
                 };
             }
@@ -233,7 +241,7 @@
             enemyTrail.setXSpeed(20, -20);
             enemyTrail.setRotation(50, -50);
             enemyTrail.setAlpha(0.4, 0, 800);
-            enemyTrail.setScale(0.01, 0.1, 0.1, 1000, Phaser.Easing.Quintic.Out);
+            enemyTrail.setScale(0.01, 0.1, 0.01, 0.1, 1000, Phaser.Easing.Quintic.Out);
             enemy.trail = enemyTrail;
         }
 
