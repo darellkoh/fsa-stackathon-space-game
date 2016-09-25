@@ -26,6 +26,7 @@
             fireButton,
             greenEnemies,
             explosions,
+            shields,
             bulletTimer = 0;
 
 
@@ -64,6 +65,7 @@
 
             // create player
             player = game.add.sprite(450, 525, 'player');
+            player.health = 100;
             player.anchor.setTo(0.5, 0.5);
             player.width = 70;
             player.height = 80;
@@ -72,6 +74,9 @@
             game.physics.enable(player, Phaser.Physics.ARCADE);
             player.body.maxVelocity.setTo(MAXSPEED, MAXSPEED);
             player.body.drag.setTo(DRAG, DRAG);
+            player.events.onKilled.add(function(){
+                emitter.kill();
+            })
 
             // init game controls
             cursors = game.input.keyboard.createCursorKeys();
@@ -104,6 +109,7 @@
             greenEnemies.forEach(function(enemy) {
                 addEnemyEmitterTrail(enemy);
                 enemy.body.setSize(enemy.width * 3 / 4, enemy.height * 3 / 4);
+                enemy.damageAmount = 20;
                 enemy.events.onKilled.add(function() {
                     enemy.trail.kill();
                 });
@@ -121,6 +127,12 @@
             explosions.forEach(function(explosion){
                 explosion.animations.add('explosion');
             });
+
+            // Shields stats
+            shields = game.add.text(game.world.width - 150, 10, 'Shields: ' + player.health + '%', { font: '20px Arial', fill: '#fff'});
+            shields.render = function(){
+                shields.text = 'Shields: ' + Math.max(player.health, 0) + '%';
+            }
         }
 
         function update() {
@@ -131,7 +143,7 @@
             player.body.acceleration.x = 0;
 
             // fire bullets
-            if (fireButton.isDown || game.input.activePointer.isDown) {
+            if (player.alive && (fireButton.isDown || game.input.activePointer.isDown)){
                 fireBullet();
             }
 
@@ -252,6 +264,9 @@
             explosion.alpha = 0.7;
             explosion.play('explosion', 30, false, true);
             enemy.kill();
+
+            player.damage(enemy.damageAmount);
+            shields.render();
         }
 
         function hitEnemy(enemy, bullet){
