@@ -1,5 +1,5 @@
 {
-  "name": "",
+  "name": "FSA Stackathon Project",
   "version": "1.0.0",
   "description": "",
   "scripts": {
@@ -8,13 +8,13 @@
   },
   "repository": {
     "type": "git",
-    "url": ""
+    "url": "https://github.com/darellkoh/fsa-stackathon-space-game.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": ""
+    "url": "https://github.com/darellkoh/fsa-stackathon-space-game/issues"
   },
   "homepage": "",
   "dependencies": {
