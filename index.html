@@ -1,147 +1,184 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 
 <head>
-    <meta charset="UTF-8" />
-    <title>Super Mario Knockoff!</title>
-    <script src="//cdn.jsdelivr.net/phaser/2.5.0/phaser.min.js"></script>
+    <meta name="description" content="Phaser.js game demo" />
+    <meta charset="utf-8">
+    <title>SPACE WARS</title>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/phaser/2.0.5/phaser.min.js" type="text/javascript"></script>
 </head>
 
 <body>
     <script type="text/javascript">
     window.onload = function() {
-
-        var game = new Phaser.Game(800, 600, Phaser.AUTO, '', {
+        let game = new Phaser.Game(950, 600, Phaser.AUTO, '', {
             preload: preload,
             create: create,
             update: update
         });
 
+        let player,
+            starfield,
+            cursors,
+            angle,
+            emitter,
+            bullets,
+            fireButton,
+            greenEnemies,
+            bulletTimer = 0;
+
+
+
+        // constants
+        const ACCELERATION = 800,
+            DRAG = 400,
+            MAXSPEED = 400;
+
         function preload() {
+            game.load.image('starfield', 'space2.jpg');
+            game.load.image('fire1', 'fire1.png');
+            game.load.image('fire2', 'fire2.png');
+            game.load.image('fire3', 'fire3.png');
+            game.load.image('smoke', 'smoke-puff.png');
+            game.load.image('player', 'player.png');
+            game.load.image('bullet', 'bullet.png');
+            game.load.image('enemy-green', 'enemy-green.png');
 
-            game.load.image('sky', 'sky.png');
-            game.load.image('ground', 'platform.png');
-            game.load.image('star', 'star.png');
-            game.load.spritesheet('dude', 'dude.png', 32, 48);
+
         }
-
-        var platforms;
-        var player;
-        var cursors;
-        var stars;
-        var score = 0;
-        var scoreText;
 
         function create() {
+            // create background
+            starfield = game.add.tileSprite(0, 0, game.width, game.height, 'starfield');
 
-            // var logo = game.add.sprite(game.world.centerX, game.world.centerY, 'logo');
-            // logo.anchor.setTo(0.5, 0.5);
+            // create bullets
+            bullets = game.add.group();
+            bullets.enableBody = true;
+            bullets.physicsBodyType = Phaser.Physics.ARCADE;
+            bullets.createMultiple(30, 'bullet');
+            bullets.setAll('anchor.x', 0.5);
+            bullets.setAll('anchor.y', 1);
+            bullets.setAll('outOfBoundsKill', true);
+            bullets.setAll('checkWorldBounds', true);
 
-            // init physics
-            game.physics.startSystem(Phaser.Physics.ARCADE);
+            // create player
+            player = game.add.sprite(400, 500, 'player');
+            player.anchor.setTo(0.5, 0.5);
+            player.width = 70;
+            player.height = 80;
 
-            // background
-            game.add.sprite(0, 0, 'sky');
+            // init player physics
+            game.physics.enable(player, Phaser.Physics.ARCADE);
+            player.body.maxVelocity.setTo(MAXSPEED, MAXSPEED);
+            player.body.drag.setTo(DRAG, DRAG);
 
-            // contains ground and two ledges
-            platforms = game.add.group();
-
-            // enable physics for any object created in this group
-            platforms.enableBody = true;
-
-            // create the ground
-            var ground = platforms.create(0, game.world.height - 64, 'ground');
-
-            // scale ground to fit width of game (original sprite is 400 x 32 in size)
-            ground.scale.setTo(2, 2);
-
-            // this stops it falling away when you jump on it
-            ground.body.immovable = true;
-
-            // create two ledges
-            var ledge = platforms.create(400, 400, 'ground');
-            ledge.body.immovable = true;
-            ledge = platforms.create(-150, 250, 'ground');
-            ledge.body.immovable = true;
-
-            // creating player
-            player = game.add.sprite(32, game.world.height - 150, 'dude');
-
-            // enable physics on the player
-            game.physics.arcade.enable(player);
-
-            // player physics properties
-            player.body.bounce.y = 0.2;
-            player.body.gravity.y = 300;
-            player.body.collideWorldBounds = true;
-
-            player.animations.add('left', [0, 1, 2, 3], 10, true); // [frames, fps, true tells animation to loop]
-            player.animations.add('right', [5, 6, 7, 8], 10, true);
-
-            stars = game.add.group();
-
-            stars.enableBody = true;
-
-            //  Here we'll create 12 of them evenly spaced apart
-            for (var i = 0; i < 12; i++) {
-                //  Create a star inside of the 'stars' group
-                var star = stars.create(i * 70, 0, 'star');
-
-                //  Let gravity do its thing
-                star.body.gravity.y = 6;
-
-                //  This just gives each star a slightly random bounce value
-                star.body.bounce.y = 0.7 + Math.random() * 0.2;
-            }
-
-            // game controls
+            // init game controls
             cursors = game.input.keyboard.createCursorKeys();
+            fireButton = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
 
-            //  The score
-            scoreText = game.add.text(16, 16, 'score: 0', {
-                fontSize: '32px',
-                fill: '#000'
-            });
+            // create fire
+            emitter = game.add.emitter(game.world.centerX, game.world.centerY, 400);
+
+            emitter.makeParticles(['fire1', 'fire2', 'fire3', 'smoke']);
+
+            emitter.gravity = 200;
+            emitter.setAlpha(1, 0, 300);
+            emitter.setScale(0.8, 0, 0.8, 0, 3000);
+
+            emitter.start(false, 3000, 5);
+
+            player.animations.add('pulse');
+            player.play('pulse', 30, true);
+
+            // create green enemies
+            greenEnemies = game.add.group();
+            greenEnemies.enableBody = true;
+            greenEnemies.physicsBodyType = Phaser.Physics.ARCADE;
+            greenEnemies.createMultiple(5, 'enemy-green');
+            greenEnemies.setAll('anchor.x', 0.5);
+            greenEnemies.setAll('anchor.y', 0.5);
+            greenEnemies.setAll('scale.x', 0.5);
+            greenEnemies.setAll('scale.y', 0.5);
+            greenEnemies.setAll('angle', 180);
+            greenEnemies.setAll('outOfBoundsKill', true);
+            greenEnemies.setAll('checkWorldBounds', true);
+
+            launchGreenEnemy();
         }
 
-        // called by core game loop
         function update() {
-            // collide the player and the stars with platforms
-            game.physics.arcade.collide(player, platforms);
-            game.physics.arcade.collide(stars, platforms);
+            // background scrolling
+            starfield.tilePosition.y += 2;
 
-            //  Checks to see if the player overlaps with any of the stars, if he does call the collectStar function
-            game.physics.arcade.overlap(player, stars, collectStar, null, this);
+            // reset player, check for movement keys
+            player.body.acceleration.x = 0;
 
-            // reset player velocity (movement)
-            player.body.velocity.x = 0;
+            // fire bullets
+            if(fireButton.isDown || game.input.activePointer.isDown){
+                fireBullet();
+            }
 
-            // move to the left
+            // create ship angle illusion
+            angle = player.body.velocity.x / MAXSPEED;
+            player.angle = angle * 30;
+
+            // avoid flying off screen edges!
+            if (player.x > game.width - 50) {
+                player.x = game.width - 50;
+                player.body.acceleration.x = 0;
+            }
+
+            if (player.x < 50) {
+                player.x = 50;
+                player.body.acceleration.x = 0;
+            }
+
+            // player speed
             if (cursors.left.isDown) {
-                player.body.velocity.x = -150;
-                player.animations.play('left');
-
-                // move to the right
+                player.body.acceleration.x = -ACCELERATION;
             } else if (cursors.right.isDown) {
-                player.body.velocity.x = 150;
-                player.animations.play('right');
-
-                // stop
-            } else {
-                player.animations.stop();
-                player.frame = 4;
+                player.body.acceleration.x = ACCELERATION;
             }
 
-            // allow player to jump if they are touching the ground
-            if (cursors.up.isDown && player.body.touching.down) {
-                player.body.velocity.y = -350;
-            }
+            // add fire and smoke particles to ship
+            var px = player.body.velocity.x;
+            var py = player.body.velocity.y;
+
+            px *= -1;
+            py *= -1;
+
+            emitter.minParticleSpeed.set(px, py);
+            emitter.maxParticleSpeed.set(px, py);
+
+            emitter.emitX = player.x;
+            emitter.emitY = player.y + 80;
+
+            game.world.wrap(player, 64);
+
+            // move ship towards pointer
+
+            // if(game.input.x < game.width - 20 && game.input.x > 20 && game.input.y > 20 && game.input.y < game.height - 20){
+            //     var minDist = 200;
+            //     var dist = game.input.x - player.x;
+            //     player.body.velocity.x = MAXSPEED * game.math.clamp(dist / minDist, -1, 1);
+            // }
+
         }
 
-        function collectStar(player, star) {
-            star.kill();
-            score += 10;
-            scoreText.text = 'Score: ' + score;
+        // utility functions
+        function fireBullet(){
+            var bullet_speed = 400;
+            var bullet_time_spacing = 250;
+            var bullet = bullets.getFirstExists(false);
+
+            if(bullet){
+                var bulletOffset = 20 * Math.sin(game.math.degToRad(player.angle));
+                bullet.reset(player.x + bulletOffset, player.y);
+                bullet.angle = player.angle;
+                game.physics.arcade.velocityFromAngle(bullet.angle - 90, bullet_speed, bullet.body.velocity);
+                bullet.body.velocity.x += player.body.velocity.x;
+                bulletTimer = game.time.now + bullet_time_spacing;
+            }
         }
     };
     </script>

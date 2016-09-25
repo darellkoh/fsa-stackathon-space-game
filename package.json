@@ -1,22 +1,22 @@
 {
-  "name": "A 2D-game using Phaser.io",
+  "name": "",
   "version": "1.0.0",
-  "description": "This is a project built for Fullstack Academy's Stackathon project (1607 cohort)",
+  "description": "",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "nodemon server.js"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/darellkoh/fsa-stackathon-2D-game.git"
+    "url": ""
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/darellkoh/fsa-stackathon-2D-game/issues"
+    "url": ""
   },
-  "homepage": "https://github.com/darellkoh/fsa-stackathon-2D-game#readme",
+  "homepage": "",
   "dependencies": {
     "body-parser": "^1.15.2",
     "express": "^4.14.0",
