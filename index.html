@@ -25,9 +25,12 @@
             bullets,
             fireButton,
             greenEnemies,
+            blueEnemies,
             explosions,
             shields,
+            enemyBullets,
             greenEnemyLaunchTimer,
+            blueEnemyLaunchTimer,
             gameOver,
             score = 0,
             scoreText,
@@ -50,6 +53,8 @@
             game.load.image('player', 'player.png');
             game.load.image('bullet', 'bullet.png');
             game.load.image('enemy-green', 'enemy-green.png');
+            game.load.image('enemy-blue', 'enemy-blue.png');
+            game.load.image('blueEnemyBullet', 'enemy-blue-bullet.png');
             game.load.spritesheet('explosion', 'explode.png', 128, 128);
             game.load.bitmapFont('spacefont', 'spacefont.png', 'spacefont.xml');
         }
@@ -122,6 +127,25 @@
             });
 
             game.time.events.add(1000, launchGreenEnemy);
+
+            // create blue enemies
+            blueEnemies = game.add.group();
+            blueEnemies.enableBody = true;
+            blueEnemies.physicsBodyType = Phaser.Physics.ARCADE;
+            blueEnemies.createMultiple(30, 'enemy-blue');
+            blueEnemies.setAll('anchor.x', 0.5);
+            blueEnemies.setAll('anchor.y', 0.5);
+            blueEnemies.setAll('scale.x', 0.5);
+            blueEnemies.setAll('scale.y', 0.5);
+            blueEnemies.setAll('angle', 180);
+            // blueEnemies.width = 40;
+            // blueEnemies.height = 50;
+            blueEnemies.forEach(function(enemy) {
+                enemy.damageAmount = 40;
+            });
+
+            game.time.events.add(1000, launchBlueEnemy);
+
 
             // create explosion pool
             explosions = game.add.group();
@@ -209,6 +233,8 @@
             // check for collisions
             game.physics.arcade.overlap(player, greenEnemies, shipCollide, null, this);
             game.physics.arcade.overlap(greenEnemies, bullets, hitEnemy, null, this);
+            game.physics.arcade.overlap(player, blueEnemies, shipCollide, null, this);
+            game.physics.arcade.overlap(blueEnemies, bullets, hitEnemy, null, this);
 
             // Game over
             if (!player.alive && gameOver.visible === false) {
@@ -293,6 +319,44 @@
             greenEnemyLaunchTimer = game.time.events.add(game.rnd.integerInRange(min_enemy_spacing, max_enemy_spacing), launchGreenEnemy);
         }
 
+        function launchBlueEnemy(){
+            var startingX = game.rnd.integerInRange(100, game.width - 100);
+            var verticalSpeed = 180;
+            var spread = 60;
+            var frequency = 70;
+            var verticalSpacing = 70;
+            var numEnemiesInWave = 5;
+            var timeBetweenWaves = 7000;
+
+            // launch wave
+            for(var i = 0; i < numEnemiesInWave; i++){
+                var enemy = blueEnemies.getFirstExists(false);
+                if(enemy){
+                    enemy.startingX = startingX;
+                    enemy.reset(game.width / 2, -verticalSpacing * i);
+                    enemy.body.velocity.y = verticalSpeed;
+
+                    // for each enemy, update function
+                    enemy.update = function(){
+                        // wave movement
+                        this.body.x = this.startingX + Math.sin((this.y) / frequency) * spread;
+
+                        // give ship illusion of angle
+                        angle = Math.cos((this.y + 60) / frequency);
+                        // this.scale.x = 0.5 * Math.abs(angle) / 8;
+                        this.angle = 180 - angle * 2;
+
+                        // kill enemies when they go off-screen
+                        if(this.y > game.height + 200){
+                            this.kill();
+                        }
+                    };
+                }
+            }
+            // send another wave shortly
+            blueEnemyLaunchTimer = game.time.events.add(timeBetweenWaves, launchBlueEnemy);
+        }
+
         function addEnemyEmitterTrail(enemy) {
             var enemyTrail = game.add.emitter(enemy.x, player.y - 10, 100);
             enemyTrail.width = 10;
@@ -335,6 +399,9 @@
             greenEnemies.callAll('kill');
             game.time.events.remove(greenEnemyLaunchTimer);
             game.time.events.add(1000, launchGreenEnemy);
+
+            blueEnemies.callAll('kill');
+            game.time.events.remove(blueEnemyLaunchTimer);
 
             // revive player
             player.revive();
