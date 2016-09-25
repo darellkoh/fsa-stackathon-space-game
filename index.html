@@ -27,6 +27,10 @@
             greenEnemies,
             explosions,
             shields,
+            greenEnemyLaunchTimer,
+            gameOver,
+            score = 0,
+            scoreText,
             bulletTimer = 0;
 
 
@@ -35,6 +39,7 @@
         const ACCELERATION = 900
         DRAG = 400
         MAXSPEED = 500
+
 
         function preload() {
             game.load.image('starfield', 'space2.jpg');
@@ -46,6 +51,7 @@
             game.load.image('bullet', 'bullet.png');
             game.load.image('enemy-green', 'enemy-green.png');
             game.load.spritesheet('explosion', 'explode.png', 128, 128);
+            game.load.bitmapFont('spacefont', 'spacefont.png', 'spacefont.xml');
         }
 
 
@@ -74,9 +80,13 @@
             game.physics.enable(player, Phaser.Physics.ARCADE);
             player.body.maxVelocity.setTo(MAXSPEED, MAXSPEED);
             player.body.drag.setTo(DRAG, DRAG);
-            player.events.onKilled.add(function(){
+            player.events.onKilled.add(function() {
                 emitter.kill();
-            })
+            });
+
+            player.events.onRevived.add(function() {
+                emitter.start(false, 3000, 5);
+            });
 
             // init game controls
             cursors = game.input.keyboard.createCursorKeys();
@@ -84,15 +94,11 @@
 
             // create fire
             emitter = game.add.emitter(game.world.centerX, game.world.centerY, 400);
-
             emitter.makeParticles(['fire1', 'fire2', 'fire3', 'smoke']);
-
             emitter.gravity = 200;
             emitter.setAlpha(1, 0, 300);
             emitter.setScale(0.8, 0, 0.8, 0, 3000);
-
             emitter.start(false, 3000, 5);
-
             player.animations.add('pulse');
             player.play('pulse', 30, true);
 
@@ -115,25 +121,41 @@
                 });
             });
 
-            launchGreenEnemy();
+            game.time.events.add(1000, launchGreenEnemy);
 
-                // create explosion pool
+            // create explosion pool
             explosions = game.add.group();
             explosions.enableBody = true;
             explosions.physicsBodyType = Phaser.Physics.ARCADE;
             explosions.createMultiple(30, 'explosion');
             explosions.setAll('anchor.x', 0.5);
             explosions.setAll('anchor.y', 0.5);
-            explosions.forEach(function(explosion){
+            explosions.forEach(function(explosion) {
                 explosion.animations.add('explosion');
             });
 
-            // Shields stats
-            shields = game.add.text(game.world.width - 150, 10, 'Shields: ' + player.health + '%', { font: '20px Arial', fill: '#fff'});
-            shields.render = function(){
+            // shields stats
+            shields = game.add.bitmapText(game.world.width - 250, 10, 'spacefont', '' + player.health + '%', 50);
+            shields.render = function() {
                 shields.text = 'Shields: ' + Math.max(player.health, 0) + '%';
-            }
+            };
+            shields.render();
+
+            // score
+            scoreText = game.add.bitmapText(10, 10, 'spacefont', '', 50);
+            scoreText.render = function() {
+                scoreText.text = 'Score: ' + score;
+            };
+            scoreText.render();
+
+
+            // game over text
+            gameOver = game.add.bitmapText(game.world.centerX, game.world.centerY, 'spacefont', 'GAME OVER!', 110);
+            gameOver.x = gameOver.x - gameOver.textWidth / 2;
+            gameOver.y = gameOver.y - gameOver.textHeight / 3;
+            gameOver.visible = false;
         }
+
 
         function update() {
             // background scrolling
@@ -143,7 +165,7 @@
             player.body.acceleration.x = 0;
 
             // fire bullets
-            if (player.alive && (fireButton.isDown || game.input.activePointer.isDown)){
+            if (player.alive && (fireButton.isDown || game.input.activePointer.isDown)) {
                 fireBullet();
             }
 
@@ -187,17 +209,42 @@
             // check for collisions
             game.physics.arcade.overlap(player, greenEnemies, shipCollide, null, this);
             game.physics.arcade.overlap(greenEnemies, bullets, hitEnemy, null, this);
+
+            // Game over
+            if (!player.alive && gameOver.visible === false) {
+                gameOver.visible = true;
+                gameOver.alpha = 0;
+                var fadeInGameOver = game.add.tween(gameOver);
+                fadeInGameOver.to({
+                    alpha: 1
+                }, 1000, Phaser.Easing.Quintic.Out);
+                fadeInGameOver.onComplete.add(setResetHandlers);
+                fadeInGameOver.start();
+
+                // 'click to restart' handler
+                function setResetHandlers() {
+                    tapRestart = game.input.onTap.addOnce(_restart, this);
+                    spaceRestart = fireButton.onDown.addOnce(_restart, this);
+
+                    function _restart() {
+                        tapRestart.detach();
+                        spaceRestart.detach();
+                        restart();
+                    }
+                }
+            }
         }
 
-        // utility functions
+        // UTILITY FUNCTIONS
 
         // for debugging purposes
-        function render(){
-            for(var i = 0; i < greenEnemies.length; i++){
+        function render() {
+            for (var i = 0; i < greenEnemies.length; i++) {
                 game.debug.body(greenEnemies.children[i]);
             }
             game.debug.body(player);
         }
+
         function fireBullet() {
             var bullet_speed = 400;
             var bullet_time_spacing = 250;
@@ -243,7 +290,7 @@
             }
 
             // send another enemy shortly
-            game.time.events.add(game.rnd.integerInRange(min_enemy_spacing, max_enemy_spacing), launchGreenEnemy);
+            greenEnemyLaunchTimer = game.time.events.add(game.rnd.integerInRange(min_enemy_spacing, max_enemy_spacing), launchGreenEnemy);
         }
 
         function addEnemyEmitterTrail(enemy) {
@@ -257,7 +304,7 @@
             enemy.trail = enemyTrail;
         }
 
-        function shipCollide(player, enemy){
+        function shipCollide(player, enemy) {
             var explosion = explosions.getFirstExists(false);
             explosion.reset(enemy.body.x + enemy.body.halfWidth, enemy.body.y + enemy.body.halfHeight);
             explosion.body.velocity.y = enemy.body.velocity.y;
@@ -269,7 +316,7 @@
             shields.render();
         }
 
-        function hitEnemy(enemy, bullet){
+        function hitEnemy(enemy, bullet) {
             var explosion = explosions.getFirstExists(false);
             explosion.reset(bullet.body.x + bullet.body.halfWidth, bullet.body.y + bullet.body.halfHeight);
             explosion.body.velocity.y = enemy.body.velocity.y;
@@ -277,6 +324,27 @@
             explosion.play('explosion', 30, false, true);
             enemy.kill();
             bullet.kill();
+
+            // increase score
+            score += enemy.damageAmount * 10;
+            scoreText.render();
+        }
+
+        function restart() {
+            // reset enemies
+            greenEnemies.callAll('kill');
+            game.time.events.remove(greenEnemyLaunchTimer);
+            game.time.events.add(1000, launchGreenEnemy);
+
+            // revive player
+            player.revive();
+            player.health = 100;
+            shields.render();
+            score = 0;
+            scoreText.render();
+
+            // hide text
+            gameOver.visible = false;
         }
     };
     </script>
