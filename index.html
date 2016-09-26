@@ -830,21 +830,14 @@
 
         function changeVolume(pointer) {
 
-            if (pointer.y < 100)
-            {
+            if (pointer.y < 100) {
                 music.mute = false;
-            }
-            else if (pointer.y < 300)
-            {
+            } else if (pointer.y < 300) {
                 music.volume += 0.1;
-            }
-            else
-            {
+            } else {
                 music.volume -= 0.1;
             }
-
         }
-
     };
     </script>
 </body>
