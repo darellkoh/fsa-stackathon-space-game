@@ -4,4 +4,4 @@ Space Blitz is a 2D vertical scroller space shooter game created during a weeken
 
 A one-person project built using JavaScript, HTML5 and the utterly fun and addictive Phaser.io framework. 
 
-Play it at: http://space-blitz.herokuapp.com
+Live at: http://space-blitz.herokuapp.com
